@@ -19,14 +19,24 @@ jobs:
       with:
         dotnet-version: '6.0.x'
     - name: Install Chrome
-      run:
+      run: |
         sudo apt-get update
-        sudo apt-get install -y google-chrome-stable
+        sudo apt-get install -y wget
+        wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+        sudo dpkg -i google-chrome-stable_current_amd64.deb || sudo apt-get -fy install
+    - name: Install the matching version of the ChromeDriver
+      run: |
+        CHROME_VERSION=$(google-chrome --version | awk '{print $3}' | cut -d. -f1)
+        CHROMEDRIVER_VERSION=$(curl -s "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_$CHROME_VERSION")
+        wget "https://chromedriver.storage.googleapis.com/$CHROMEDRIVER_VERSION/chromedriver_linux64.zip"
+        unzip chromedriver_linux64.zip
+        sudo mv chromedriver /usr/bin/chromedriver
+        sudo chmod +x /usr/bin/chromedriver
+    - name: Set Chromedriver environment variable
+      run: echo "CHROMEWEBDRIVER=$(which chromedriver)" >> $GITHUB_ENV
     - name: Install dependencies
       run: dotnet restore
     - name: Build the solution
       run: dotnet build --no-restore
-    - name: Run the unity tests
-      env:
-        CHROMEWEBDRIVER: /usr/bin/google-chrome
+    - name: Run the unit tests
       run: dotnet test --verbosity normal
